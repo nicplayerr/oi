@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Confirm Delete VPS{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+    <h2 class="text-2xl font-bold mb-4 text-center text-red-600">Confirm Deletion</h2>
+    <p class="mb-4">Are you sure you want to delete VPS ID: {{ vps_id }}? This action cannot be undone.</p>
+    <div class="flex space-x-4">
+        <button onclick="deleteVPS()" class="w-full bg-red-600 text-white p-2 rounded hover:bg-red-700">Delete</button>
+        <a href="{{ url_for('dashboard') }}" class="w-full bg-gray-600 text-white p-2 rounded hover:bg-gray-700 text-center">Cancel</a>
+    </div>
+</div>
+<script>
+    function deleteVPS() {
+        fetch('{{ url_for("delete_vps", vps_id=vps_id) }}', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                } else {
+                    alert(data.message);
+                    window.location.href = '{{ url_for("dashboard") }}';
+                }
+            })
+            .catch(error => alert('Error: ' + error));
+    }
+</script>
+{% endblock %}

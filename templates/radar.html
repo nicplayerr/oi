@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}System Radar{% endblock %}
+{% block extra_css %}
+<style>
+    #radarChart {
+        max-width: 500px;
+        margin: 0 auto;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<h2 class="mb-4">System Radar</h2>
+<canvas id="radarChart"></canvas>
+<a href="{{ url_for('admin_panel') }}" class="btn btn-primary mt-4">Back to Admin Panel</a>
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    const ctx = document.getElementById('radarChart').getContext('2d');
+    const radarChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: ['CPU Usage', 'Memory Usage', 'Disk Usage', 'Network Sent', 'Network Received'],
+            datasets: [{
+                label: 'System Usage (%)',
+                data: [
+                    {{ system_stats.cpu_usage }},
+                    {{ system_stats.memory_usage }},
+                    {{ system_stats.disk_usage }},
+                    {{ system_stats.network_sent / 1000 | round(2) }}, // Scale for visualization
+                    {{ system_stats.network_recv / 1000 | round(2) }} // Scale for visualization
+                ],
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
+{% endchart %}

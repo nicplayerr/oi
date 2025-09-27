@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+{% block title %}VPS Details - {{ vps.vps_id }}{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-6">
+    <!-- Header Section -->
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl shadow-lg p-6 mb-6 text-white">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold mb-2">VPS Details</h1>
+                <p class="text-blue-100">ID: {{ vps.vps_id }}</p>
+            </div>
+            <div class="mt-4 md:mt-0 bg-blue-500/30 px-4 py-2 rounded-lg">
+                <span class="inline-flex items-center">
+                    <span class="w-3 h-3 rounded-full mr-2 {% if container_status == 'running' %}bg-green-400{% elif container_status == 'exited' or container_status == 'stopped' %}bg-red-400{% else %}bg-yellow-400{% endif %}"></span>
+                    <span class="font-medium">{{ container_status | capitalize }}</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resource Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <!-- CPU Card -->
+        <div class="bg-white rounded-xl shadow-md p-5 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-700">CPU</h3>
+                <svg class="w-8 h-8 text-blue-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 3V5M15 3V5M9 19V21M15 19V21M5 9H3M5 15H3M21 9H19M21 15H19M7 19H17C18.1046 19 19 18.1046 19 17V7C19 5.89543 18.1046 5 17 5H7C5.89543 5 5 5.89543 5 7V17C5 18.1046 5.89543 19 7 19ZM9 9H15V15H9V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">{{ vps.cpu }} cores</p>
+            <div class="mt-2 bg-gray-200 rounded-full h-2">
+                <div id="cpu-usage-bar" class="bg-blue-600 h-2 rounded-full" style="width: 0%"></div>
+            </div>
+            <p class="text-sm text-gray-500 mt-1" id="cpu-usage-text">Loading...</p>
+        </div>
+
+        <!-- RAM Card -->
+        <div class="bg-white rounded-xl shadow-md p-5 border-l-4 border-green-500">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-700">Memory</h3>
+                <svg class="w-8 h-8 text-green-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 7V17M16 7V17M12 7V17M6 20H18C19.1046 20 20 19.1046 20 18V6C20 4.89543 19.1046 4 18 4H6C4.89543 4 4 4.89543 4 6V18C4 19.1046 4.89543 20 6 20Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">{{ vps.memory }} GB</p>
+            <div class="mt-2 bg-gray-200 rounded-full h-2">
+                <div id="ram-usage-bar" class="bg-green-600 h-2 rounded-full" style="width: 0%"></div>
+            </div>
+            <p class="text-sm text-gray-500 mt-1" id="ram-usage-text">Loading...</p>
+        </div>
+
+        <!-- Disk Card -->
+        <div class="bg-white rounded-xl shadow-md p-5 border-l-4 border-purple-500">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-700">Disk</h3>
+                <svg class="w-8 h-8 text-purple-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M6.34314 6.34314L8.46447 8.46447M17.6569 17.6569L15.5355 15.5355M15.5355 8.46447L17.6569 6.34314M8.46447 15.5355L6.34314 17.6569" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">{{ vps.disk }} GB</p>
+            <div class="mt-2 bg-gray-200 rounded-full h-2">
+                <div id="disk-usage-bar" class="bg-purple-600 h-2 rounded-full" style="width: 0%"></div>
+            </div>
+            <p class="text-sm text-gray-500 mt-1" id="disk-usage-text">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Details and Actions Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- VPS Information -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <h2 class="text-xl font-bold mb-4 text-gray-800">VPS Information</h2>
+            <div class="space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-gray-100">
+                    <span class="font-medium text-gray-600">OS Image</span>
+                    <span class="text-gray-900">{{ vps.os_image }}</span>
+                </div>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-gray-100">
+                    <span class="font-medium text-gray-600">SSH Access</span>
+                    <div class="flex items-center">
+                        <code class="bg-gray-100 px-2 py-1 rounded text-sm">ssh root@{{ server_ip }} -p {{ vps.port }}</code>
+                        <button onclick="copySSHCommand()" class="ml-2 text-blue-600 hover:text-blue-800">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-gray-100">
+                    <span class="font-medium text-gray-600">Root Password</span>
+                    <div class="flex items-center">
+                        <span id="password" class="font-mono bg-gray-100 px-2 py-1 rounded text-sm">{{ vps.password }}</span>
+                        <button onclick="copyPassword()" class="ml-2 text-blue-600 hover:text-blue-800 flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                            </svg>
+                            Copy
+                        </button>
+                    </div>
+                </div>
+                {% if vps.tmate_session %}
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-gray-100">
+                    <span class="font-medium text-gray-600">tmate Session</span>
+                    <span class="text-gray-900 break-all">{{ vps.tmate_session }}</span>
+                </div>
+                {% endif %}
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-gray-100">
+                    <span class="font-medium text-gray-600">Created</span>
+                    <span class="text-gray-900">{{ vps.created_at }}</span>
+                </div>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between py-2">
+                    <span class="font-medium text-gray-600">Expires</span>
+                    <span class="text-gray-900">{{ vps.expires_at }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- VPS Actions -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <h2 class="text-xl font-bold mb-4 text-gray-800">VPS Actions</h2>
+            <div class="grid grid-cols-2 gap-3">
+                {% if container_status == 'running' %}
+                    <a href="{{ url_for('stop_vps', vps_id=vps.vps_id) }}" class="flex items-center justify-center bg-yellow-100 text-yellow-800 px-4 py-3 rounded-lg hover:bg-yellow-200 transition-colors">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path>
+                        </svg>
+                        Stop
+                    </a>
+                {% elif container_status == 'exited' or container_status == 'stopped' %}
+                    <a href="{{ url_for('start_vps', vps_id=vps.vps_id) }}" class="flex items-center justify-center bg-green-100 text-green-800 px-4 py-3 rounded-lg hover:bg-green-200 transition-colors">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Start
+                    </a>
+                {% endif %}
+                <a href="{{ url_for('restart_vps', vps_id=vps.vps_id) }}" class="flex items-center justify-center bg-blue-100 text-blue-800 px-4 py-3 rounded-lg hover:bg-blue-200 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Restart
+                </a>
+                <a href="{{ url_for('vps_console', vps_id=vps.vps_id) }}" class="flex items-center justify-center bg-indigo-100 text-indigo-800 px-4 py-3 rounded-lg hover:bg-indigo-200 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    Console
+                </a>
+                <button onclick="changePassword()" class="flex items-center justify-center bg-purple-100 text-purple-800 px-4 py-3 rounded-lg hover:bg-purple-200 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                    Change Password
+                </button>
+                <a href="{{ url_for('delete_vps', vps_id=vps.vps_id) }}" class="flex items-center justify-center bg-red-100 text-red-800 px-4 py-3 rounded-lg hover:bg-red-200 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    Delete
+                </a>
+                {% if is_admin %}
+                    <a href="{{ url_for('edit_vps', vps_id=vps.vps_id) }}" class="flex items-center justify-center bg-teal-100 text-teal-800 px-4 py-3 rounded-lg hover:bg-teal-200 transition-colors">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                        Edit
+                    </a>
+                    <a href="{{ url_for('renew_vps', vps_id=vps.vps_id) }}" class="flex items-center justify-center bg-indigo-100 text-indigo-800 px-4 py-3 rounded-lg hover:bg-indigo-200 transition-colors">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Renew
+                    </a>
+                    {% if vps.status == 'suspended' %}
+                        <a href="{{ url_for('unsuspend_vps', vps_id=vps.vps_id) }}" class="flex items-center justify-center bg-green-100 text-green-800 px-4 py-3 rounded-lg hover:bg-green-200 transition-colors">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path>
+                            </svg>
+                            Unsuspend
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('suspend_vps', vps_id=vps.vps_id) }}" class="flex items-center justify-center bg-orange-100 text-orange-800 px-4 py-3 rounded-lg hover:bg-orange-200 transition-colors">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                            </svg>
+                            Suspend
+                        </a>
+                    {% endif %}
+                    <a href="{{ url_for('backup_vps', vps_id=vps.vps_id) }}" class="flex items-center justify-center bg-gray-100 text-gray-800 px-4 py-3 rounded-lg hover:bg-gray-200 transition-colors">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                        </svg>
+                        Backup
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics and Logs Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Statistics -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <h2 class="text-xl font-bold mb-4 text-gray-800">Live Statistics</h2>
+            <div id="stats" class="space-y-4">
+                <div class="animate-pulse">
+                    <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div class="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                    <div class="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
+                    <div class="h-4 bg-gray-200 rounded w-3/5"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Container Logs -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-800">Container Logs</h2>
+                <button onclick="fetchLogs()" class="text-blue-600 hover:text-blue-800 flex items-center">
+                    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+            <div class="bg-gray-900 text-gray-200 p-4 rounded-lg overflow-auto max-h-80 font-mono text-sm">
+                <pre id="logs" class="whitespace-pre-wrap">Loading logs...</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function copyPassword() {
+        navigator.clipboard.writeText(document.getElementById('password').textContent);
+        showNotification('Password copied to clipboard!', 'success');
+    }
+
+    function copySSHCommand() {
+        const sshCommand = `ssh root@{{ server_ip }} -p {{ vps.port }}`;
+        navigator.clipboard.writeText(sshCommand);
+        showNotification('SSH command copied to clipboard!', 'success');
+    }
+
+    function changePassword() {
+        fetch('{{ url_for("change_vps_password", vps_id=vps.vps_id) }}', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showNotification('Error: ' + data.error, 'error');
+                } else {
+                    document.getElementById('password').textContent = data.password;
+                    showNotification(data.message, 'success');
+                }
+            })
+            .catch(error => showNotification('Error: ' + error, 'error'));
+    }
+
+    function fetchStats() {
+        fetch('{{ url_for("vps_stats", vps_id=vps.vps_id) }}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('stats').innerHTML = '<p class="text-red-500">Error: ' + data.error + '</p>';
+                } else {
+                    // Update progress bars
+                    document.getElementById('cpu-usage-bar').style.width = data.cpu.percent + '%';
+                    document.getElementById('ram-usage-bar').style.width = data.memory.percent + '%';
+                    document.getElementById('disk-usage-bar').style.width = Math.min(100, (data.disk.used_mb / data.disk.limit_mb * 100)) + '%';
+                    
+                    // Update usage text
+                    document.getElementById('cpu-usage-text').textContent = data.cpu.percent + '% usage';
+                    document.getElementById('ram-usage-text').textContent = data.memory.used_mb + ' MB / ' + data.memory.limit_mb + ' MB (' + data.memory.percent + '%)';
+                    document.getElementById('disk-usage-text').textContent = data.disk.used_mb + ' MB / ' + data.disk.limit_mb + ' MB';
+                    
+                    // Update stats section
+                    document.getElementById('stats').innerHTML = `
+                        <div class="space-y-3">
+                            <div>
+                                <p class="text-sm text-gray-600">CPU Usage</p>
+                                <p class="font-medium">${data.cpu.percent}%</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Memory Usage</p>
+                                <p class="font-medium">${data.memory.used_mb} MB / ${data.memory.limit_mb} MB (${data.memory.percent}%)</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Disk I/O</p>
+                                <p class="font-medium">Read: ${data.disk.read_mb} MB, Write: ${data.disk.write_mb} MB</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Uptime</p>
+                                <p class="font-medium">${data.uptime}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+    }
+
+    function fetchLogs() {
+        document.getElementById('logs').textContent = 'Loading...';
+        fetch('{{ url_for("vps_logs", vps_id=vps.vps_id) }}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('logs').textContent = 'Error: ' + data.error;
+                } else {
+                    document.getElementById('logs').textContent = data.logs;
+                }
+            })
+            .catch(error => {
+                document.getElementById('logs').textContent = 'Error fetching logs: ' + error;
+            });
+    }
+
+    function showNotification(message, type) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white ${
+            type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        }`;
+        notification.textContent = message;
+        
+        // Add to page
+        document.body.appendChild(notification);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 3000);
+    }
+
+    // Initial load
+    fetchStats();
+    fetchLogs();
+    
+    // Update stats every 10 seconds
+    setInterval(fetchStats, 10000);
+</script>
+{% endblock %}

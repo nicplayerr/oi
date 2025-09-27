@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ panel_name }} - SSH Console</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" />
+  <style>
+    :root{
+      --bg:#0b0b0d; --panel:#0f1720; --muted:#9aa4b2; --accent:#06b6d4; --danger:#ef4444;
+      --radius:12px; --gap:12px; --header-h:64px;
+      --touch:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;color:#e6eef6;background:linear-gradient(180deg,#061018 0%, #071223 100%)}
+
+    .app{display:flex;flex-direction:column;height:100vh;padding:12px;gap:12px}
+
+    /* header */
+    header{height:var(--header-h);display:flex;align-items:center;gap:12px}
+    .back-btn{appearance:none;border:0;background:transparent;color:var(--muted);font-size:20px;padding:8px 12px;border-radius:10px;cursor:pointer}
+    .back-btn:active{transform:translateY(1px)}
+    .title{flex:1;font-weight:600;font-size:16px}
+    .status{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px}
+    .status .dot{width:10px;height:10px;border-radius:999px;background:#374151}
+    .status.connected .dot{background: #10b981}
+    .status.connecting .dot{background: #f59e0b}
+    .status.error .dot{background: var(--danger)}
+
+    /* controls panel */
+    .panel{background:rgba(255,255,255,0.02);padding:12px;border-radius:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .panel .field{display:flex;flex-direction:column;flex:1;min-width:120px}
+    label{font-size:12px;color:var(--muted);margin-bottom:6px}
+    input,select{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;font-size:14px}
+    .actions{display:flex;gap:8px}
+    button.primary{background:linear-gradient(90deg,var(--accent),#7dd3fc);border:0;padding:10px 14px;border-radius:10px;font-weight:600;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:10px 14px;border-radius:10px;color:var(--muted);cursor:pointer}
+
+    /* terminal container */
+    #term-wrap{flex:1;min-height:200px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column}
+    #terminal{flex:1;min-height:150px;background:#000;height:calc(100vh - var(--header-h) - 220px)}
+
+    /* mobile tweaks */
+    @media (max-width:720px){
+      header{gap:8px}
+      .title{font-size:15px}
+      .panel{padding:10px}
+      input{padding:12px;font-size:16px}
+      #terminal{height:calc(100vh - var(--header-h) - 200px)}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <button class="back-btn" id="backBtn" aria-label="Go back">← Back</button>
+      <div class="title">🔐 SSH Console — VPS {{ vps.vps_id }}</div>
+      <div id="status" class="status"> <span class="dot"></span> <span id="statusText">Not connected</span> </div>
+    </header>
+
+    <section class="panel" aria-labelledby="connectForm">
+      <div class="field">
+        <label for="host">Host / IP</label>
+        <input id="host" name="host" placeholder="eg. 1.2.3.4 or example.com" value="127.0.0.1" inputmode="text" autocomplete="off" />
+      </div>
+
+      <div class="field" style="max-width:120px">
+        <label for="port">Port</label>
+        <input id="port" name="port" type="number" placeholder="22" value="22" min="1" max="65535" />
+      </div>
+
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" name="username" placeholder="root or ubuntu" autocomplete="username" />
+      </div>
+
+      <div class="field">
+        <label for="password">Password / Key</label>
+        <input id="password" name="password" type="password" placeholder="SSH password or private key" autocomplete="current-password" />
+      </div>
+
+      <div class="actions">
+        <button id="connectBtn" class="primary">Connect</button>
+        <button id="disconnectBtn" class="ghost" style="display:none">Disconnect</button>
+      </div>
+    </section>
+
+    <div id="term-wrap">
+      <div id="terminal" role="region" aria-label="SSH terminal"></div>
+    </div>
+
+    <small style="color:var(--muted);text-align:center">Tip: On mobile rotate to landscape for a larger terminal. Use the Back button to return to the previous page.</small>
+  </div>
+
+  <!-- scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script>
+    // basic DOM refs
+    const backBtn = document.getElementById('backBtn');
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const statusEl = document.getElementById('status');
+    const statusText = document.getElementById('statusText');
+
+    backBtn.addEventListener('click', ()=>{ try{ history.back(); }catch(e){ window.location.href = '/'; } });
+
+    // socket
+    const socket = io(); // make sure server serves socket.io
+
+    // xterm + fit
+    const term = new Terminal({ cursorBlink:true, rows:24, fontSize:14 });
+    const fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+    term.open(document.getElementById('terminal'));
+    function fit(){ try{ fitAddon.fit(); }catch(e){} }
+    window.addEventListener('resize', fit);
+    // initial fit after a short delay so CSS has applied
+    setTimeout(fit,200);
+
+    // helpers
+    function setStatus(state, text){
+      statusEl.classList.remove('connected','connecting','error');
+      statusEl.classList.add(state);
+      statusText.textContent = text;
+    }
+
+    // connection flow
+    let connected = false;
+    connectBtn.addEventListener('click', async (e)=>{
+      e.preventDefault();
+      if(connected) return;
+
+      const host = document.getElementById('host').value.trim();
+      const port = parseInt(document.getElementById('port').value) || 22;
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      if(!host || !username){
+        setStatus('error','Host and username required');
+        return;
+      }
+
+      setStatus('connecting','Connecting...');
+      connectBtn.disabled = true;
+
+      // emit connect request to server
+      socket.emit('ssh_connect', { host, port, username, password, vps_id: '{{ vps.vps_id }}' });
+    });
+
+    disconnectBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      socket.emit('ssh_disconnect');
+    });
+
+    // terminal <-> socket
+    term.onData(data => {
+      socket.emit('ssh_input', data);
+    });
+
+    // server -> terminal
+    socket.on('ssh_output', data => {
+      term.write(data);
+      fit();
+    });
+
+    // status events from server
+    socket.on('ssh_connecting', ()=> setStatus('connecting','Connecting...'));
+    socket.on('ssh_connected', ()=>{
+      connected = true;
+      setStatus('connected','Connected');
+      connectBtn.style.display = 'none';
+      disconnectBtn.style.display = 'inline-block';
+      connectBtn.disabled = false;
+      fit();
+    });
+    socket.on('ssh_disconnected', ()=>{
+      connected = false;
+      setStatus('', 'Not connected');
+      disconnectBtn.style.display = 'none';
+      connectBtn.style.display = 'inline-block';
+      fit();
+    });
+    socket.on('ssh_error', msg => {
+      connected = false;
+      setStatus('error', msg || 'Connection error');
+      connectBtn.disabled = false;
+      disconnectBtn.style.display = 'none';
+    });
+
+    // Show server connection state
+    socket.on('connect', ()=> setStatus('', 'Socket connected (idle)'));
+    socket.on('disconnect', ()=> setStatus('error','Socket disconnected'));
+
+    // accessibility: allow pressing Enter on password to connect
+    document.getElementById('password').addEventListener('keydown', (ev)=>{
+      if(ev.key === 'Enter') connectBtn.click();
+    });
+
+    // initial hint fit
+    term.writeln('\x1b[1;30mWelcome to the web SSH console.\x1b[0m');
+  </script>
+</body>
+</html>

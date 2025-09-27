@@ -1,0 +1,451 @@
+{% extends "base.html" %}
+{% block title %}Admin Panel{% endblock %}
+{% block content %}
+<div class="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">
+  <!-- Top header -->
+  <header class="max-w-7xl mx-auto mb-6">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900">Admin Dashboard</h1>
+        <p class="text-sm text-gray-500 mt-1">Manage VPS, users and system settings — organized for small screens.</p>
+      </div>
+
+      <div class="w-full sm:w-auto flex items-center gap-3">
+        <label for="global-search" class="sr-only">Search</label>
+        <div class="relative w-full sm:w-72">
+          <input id="global-search" type="search" placeholder="Search VPS, users, IDs..." 
+                 class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                 aria-label="Search VPS and users" />
+          <button id="clear-search" class="absolute right-1 top-1/2 -translate-y-1/2 inline-flex items-center justify-center p-1 rounded-md text-gray-500 hover:bg-gray-100" title="Clear search" aria-hidden="true">✕</button>
+        </div>
+        <button id="open-settings" class="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700">Settings</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main container -->
+  <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left column: Settings + Stats -->
+    <section class="lg:col-span-1 space-y-6">
+      <!-- Settings card (collapsible on mobile) -->
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-gray-800">System Settings</h2>
+          <button id="toggle-settings" class="text-sm text-indigo-600 hover:underline">Edit</button>
+        </div>
+
+        <form id="settings-form" method="POST" action="{{ url_for('admin_settings') }}" class="mt-4 space-y-4" novalidate>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label for="panel_name" class="block text-xs font-medium text-gray-600">Panel Name</label>
+              <input name="panel_name" id="panel_name" value="{{ panel_name }}" required
+                     class="mt-1 block w-full p-2 text-sm border rounded-lg bg-white focus:ring-2 focus:ring-indigo-400" />
+              <p class="mt-1 text-xs text-gray-400">Displayed in headers and emails.</p>
+            </div>
+            <div>
+              <label for="watermark" class="block text-xs font-medium text-gray-600">Watermark</label>
+              <input id="watermark" name="watermark" value="{{ watermark }}" class="mt-1 block w-full p-2 text-sm border rounded-lg" />
+            </div>
+            <div class="sm:col-span-2">
+              <label for="welcome_message" class="block text-xs font-medium text-gray-600">Welcome Message</label>
+              <input id="welcome_message" name="welcome_message" value="{{ welcome_message }}" class="mt-1 block w-full p-2 text-sm border rounded-lg" />
+            </div>
+            <div>
+              <label for="server_ip" class="block text-xs font-medium text-gray-600">Server IP</label>
+              <input id="server_ip" name="server_ip" value="{{ server_ip }}" inputmode="numeric"
+                     pattern="^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$" class="mt-1 block w-full p-2 text-sm border rounded-lg" />
+              <p id="server-ip-error" class="text-xs text-red-600 mt-1 hidden">Please enter a valid IPv4 address.</p>
+            </div>
+            <div>
+              <label for="max_containers" class="block text-xs font-medium text-gray-600">Max Containers</label>
+              <input id="max_containers" name="max_containers" value="{{ max_containers }}" type="number" min="1" class="mt-1 block w-full p-2 text-sm border rounded-lg" />
+            </div>
+            <div>
+              <label for="max_vps_per_user" class="block text-xs font-medium text-gray-600">Max VPS / User</label>
+              <input id="max_vps_per_user" name="max_vps_per_user" value="{{ max_vps_per_user }}" type="number" min="1" class="mt-1 block w-full p-2 text-sm border rounded-lg" />
+            </div>
+          </div>
+
+          <div class="flex gap-2 mt-3">
+            <button type="submit" class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700">Save</button>
+            <button type="button" id="reset-settings" class="flex-1 border border-gray-200 px-4 py-2 rounded-lg text-sm">Reset</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- System stats -->
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <h3 class="text-md font-semibold text-gray-800 mb-3">System Statistics</h3>
+        <div id="system-stats" class="space-y-3">
+          <div class="text-sm text-gray-600"><strong>CPU:</strong> <span id="cpu-usage" class="font-medium">{{ system_stats.cpu_usage }}%</span></div>
+          <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+            <div id="cpu-bar" class="h-2 rounded-full" style="width: {{ system_stats.cpu_usage }}% ; background: linear-gradient(90deg,#7c3aed,#06b6d4)"></div>
+          </div>
+
+          <div class="text-sm text-gray-600"><strong>Memory:</strong> <span id="memory-usage" class="font-medium">{{ system_stats.memory_used }} / {{ system_stats.memory_total }} GB ({{ system_stats.memory_usage }}%)</span></div>
+          <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+            <div id="mem-bar" class="h-2 rounded-full" style="width: {{ system_stats.memory_usage }}% ; background: linear-gradient(90deg,#ef4444,#f59e0b)"></div>
+          </div>
+
+          <div class="text-sm text-gray-600"><strong>Disk:</strong> <span id="disk-usage" class="font-medium">{{ system_stats.disk_used }} / {{ system_stats.disk_total }} GB ({{ system_stats.disk_usage }}%)</span></div>
+          <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+            <div id="disk-bar" class="h-2 rounded-full" style="width: {{ system_stats.disk_usage }}% ; background: linear-gradient(90deg,#10b981,#3b82f6)"></div>
+          </div>
+
+          <div class="text-sm text-gray-600 flex justify-between">
+            <span>Network</span>
+            <span class="font-medium text-sm"><span id="network-sent">{{ system_stats.network_sent }} MB</span> / <span id="network-recv">{{ system_stats.network_recv }} MB</span></span>
+          </div>
+
+          <div class="text-sm text-gray-600">
+            <strong>Active connections:</strong> <span id="active-connections" class="font-medium">{{ system_stats.active_connections }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Maintenance -->
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <h3 class="text-md font-semibold text-gray-800 mb-3">System Maintenance</h3>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <a href="{{ url_for('admin_backup') }}" class="flex-1 inline-flex items-center justify-center px-3 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700">Download Backup</a>
+          <label for="backup_file" class="flex-1 inline-flex items-center justify-center px-3 py-2 rounded-lg bg-white border text-sm cursor-pointer">Upload Backup
+            <input id="backup_file" name="backup_file" type="file" accept=".json" class="hidden" form="restore-form">
+          </label>
+          <button id="prune-docker" class="flex-1 px-3 py-2 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700">Prune Docker</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Middle & Right: lists (span 2 columns on large) -->
+    <section class="lg:col-span-2 space-y-6">
+      <!-- VPS Instances -->
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-gray-800">VPS Instances</h2>
+          <div class="flex items-center gap-3">
+            <a href="{{ url_for('create_vps') }}" class="inline-flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700">Create VPS</a>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <div class="bg-gray-50 rounded-lg p-3 flex items-center justify-between text-sm text-gray-600">
+            <div><strong>Total VPS:</strong> {{ total_vps }}</div>
+            <div class="hidden sm:block"><strong>Total Restarts:</strong> {{ total_restarts }}</div>
+            <div class="hidden sm:block"><strong>Total Created:</strong> {{ total_vps_created }}</div>
+          </div>
+
+          <div id="vps-grid" class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for vps in vps_list %}
+            <article data-search="{{ vps.vps_id }} {{ vps.os_image }} {{ users | selectattr('id','equalto',vps.created_by) | map(attribute='username') | first }}" class="bg-white border rounded-xl p-4 shadow-sm hover:shadow-md transition">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <h3 class="text-sm font-semibold text-gray-800">VPS: {{ vps.vps_id }}</h3>
+                  <p class="text-xs text-gray-500 mt-1">User: <span class="font-medium text-gray-700">{{ users | selectattr('id','equalto',vps.created_by) | map(attribute='username') | first }}</span></p>
+                </div>
+                <div class="text-right">
+                  <span id="vps-status-{{ vps.vps_id }}" class="inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium {{ 'bg-green-50 text-green-700' if vps.status == 'running' else 'bg-red-50 text-red-700' }}">
+                    {{ vps.status | capitalize }}
+                  </span>
+                </div>
+              </div>
+
+              <dl class="mt-3 text-xs text-gray-600 space-y-1">
+                <div><dt class="inline font-medium">OS:</dt> <dd class="inline"> {{ vps.os_image }}</dd></div>
+
+                <div>
+                  <dt class="inline font-medium">Stats:</dt>
+                  <dd id="vps-stats-{{ vps.vps_id }}" class="inline">
+                    {% if vps_stats[vps.vps_id] %}
+                      CPU: {{ vps_stats[vps.vps_id].cpu_percent }}%, Mem: {{ vps_stats[vps.vps_id].memory_percent }}%
+                    {% else %}
+                      Not available
+                    {% endif %}
+                  </dd>
+                </div>
+              </dl>
+
+              <div class="mt-4 flex flex-wrap gap-2">
+                <a href="{{ url_for('vps_details', vps_id=vps.vps_id) }}" class="px-3 py-1 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700">Details</a>
+                <a href="{{ url_for('edit_vps', vps_id=vps.vps_id) }}" class="px-3 py-1 rounded-lg bg-emerald-600 text-white text-sm hover:bg-emerald-700">Edit</a>
+
+                {% if vps.status == 'suspended' %}
+                <a href="{{ url_for('unsuspend_vps', vps_id=vps.vps_id) }}" class="px-3 py-1 rounded-lg bg-green-600 text-white text-sm hover:bg-green-700">Unsuspend</a>
+                {% else %}
+                <a href="{{ url_for('suspend_vps', vps_id=vps.vps_id) }}" class="px-3 py-1 rounded-lg bg-orange-500 text-white text-sm hover:bg-orange-600">Suspend</a>
+                {% endif %}
+
+                <a href="{{ url_for('renew_vps', vps_id=vps.vps_id) }}" class="px-3 py-1 rounded-lg bg-sky-600 text-white text-sm hover:bg-sky-700">Renew</a>
+              </div>
+            </article>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Users -->
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-gray-800">Users</h2>
+          <a href="{{ url_for('add_user') }}" class="inline-flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700">Add User</a>
+        </div>
+
+        <div class="mt-4">
+          <div class="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
+            <span><strong>Total Users:</strong> {{ total_users }}</span>
+            <span class="ml-4"><strong>Banned:</strong> {{ total_banned }}</span>
+          </div>
+
+          <div id="user-grid" class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for user in users %}
+            <div data-search="{{ user.username }} {{ user.role }}" class="bg-white border rounded-xl p-4 shadow-sm">
+              <p class="text-sm font-medium text-gray-800">{{ user.username }}</p>
+              <p class="text-xs text-gray-500">Role: <span class="font-medium">{{ user.role | capitalize }}</span></p>
+              <p class="text-xs text-gray-500">Created: <span class="font-medium">{{ user.created_at }}</span></p>
+
+              <div class="mt-3 flex flex-wrap gap-2">
+                <a href="{{ url_for('edit_user', user_id=user.id) }}" class="px-3 py-1 rounded-lg bg-emerald-600 text-white text-sm hover:bg-emerald-700">Edit</a>
+                {% if user.id not in banned_users %}
+                  <button data-user-id="{{ user.id }}" class="ban-btn px-3 py-1 rounded-lg bg-orange-500 text-white text-sm hover:bg-orange-600">Ban</button>
+                {% else %}
+                  <button data-user-id="{{ user.id }}" class="unban-btn px-3 py-1 rounded-lg bg-green-600 text-white text-sm hover:bg-green-700">Unban</button>
+                {% endif %}
+
+                {% if user.role == 'admin' %}
+                  <button data-user-id="{{ user.id }}" class="remove-admin-btn px-3 py-1 rounded-lg bg-yellow-500 text-white text-sm hover:bg-yellow-600">Remove Admin</button>
+                {% else %}
+                  <button data-user-id="{{ user.id }}" class="make-admin-btn px-3 py-1 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700">Make Admin</button>
+                {% endif %}
+
+                <button data-user-id="{{ user.id }}" class="delete-user-btn px-3 py-1 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700">Delete</button>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Logs -->
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <h3 class="text-md font-semibold text-gray-800 mb-3">System Logs</h3>
+        <pre class="bg-gray-50 p-3 rounded-lg overflow-auto max-h-56 text-xs text-gray-700">{{ recent_logs }}</pre>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Confirm modal -->
+<div id="confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+  <div role="dialog" aria-modal="true" aria-labelledby="confirm-title" class="bg-white rounded-xl p-5 w-11/12 max-w-md">
+    <h4 id="confirm-title" class="text-lg font-semibold text-gray-800">Confirm</h4>
+    <p id="confirm-message" class="text-sm text-gray-600 mt-2">Are you sure?</p>
+    <div class="mt-4 flex justify-end gap-2">
+      <button id="confirm-cancel" class="px-4 py-2 rounded-lg border">Cancel</button>
+      <button id="confirm-okay" class="px-4 py-2 rounded-lg bg-red-600 text-white">Yes, continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-2"></div>
+
+<script>
+/* -------------------------
+   Utilities (Toast, Modal)
+   ------------------------- */
+function toast(message, opts = {}) {
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = 'max-w-xs rounded-lg p-3 shadow-lg text-sm bg-white border';
+  el.innerHTML = `<div>${message}</div>`;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('opacity-0', 'transition', 'duration-300');
+    setTimeout(() => el.remove(), 300);
+  }, opts.duration || 3500);
+}
+
+const modal = {
+  el: document.getElementById('confirm-modal'),
+  messageEl: document.getElementById('confirm-message'),
+  okBtn: document.getElementById('confirm-okay'),
+  cancelBtn: document.getElementById('confirm-cancel'),
+  open(message, onOk) {
+    this.messageEl.textContent = message;
+    this.el.classList.remove('hidden');
+    this.okBtn.focus();
+    this._handler = () => { this.close(); onOk(); };
+    this.okBtn.addEventListener('click', this._handler, { once: true });
+    this.cancelBtn.addEventListener('click', () => this.close(), { once: true });
+  },
+  close() { this.el.classList.add('hidden'); }
+};
+
+/* -------------------------
+   Search / Filter (debounced)
+   ------------------------- */
+function debounce(fn, wait=250){
+  let t;
+  return (...args)=>{ clearTimeout(t); t = setTimeout(()=>fn(...args), wait); }
+}
+const searchInput = document.getElementById('global-search');
+const clearSearch = document.getElementById('clear-search');
+
+function applySearch(query) {
+  const q = query.trim().toLowerCase();
+  const vps = document.querySelectorAll('#vps-grid [data-search]');
+  const users = document.querySelectorAll('#user-grid [data-search]');
+  [vps, users].forEach(list => {
+    list.forEach(item => {
+      const s = item.getAttribute('data-search') || '';
+      item.style.display = (q === '' || s.toLowerCase().includes(q)) ? '' : 'none';
+    });
+  });
+}
+searchInput.addEventListener('input', debounce((e) => applySearch(e.target.value)));
+clearSearch.addEventListener('click', () => { searchInput.value=''; applySearch(''); });
+
+/* -------------------------
+   Form validation & UX
+   ------------------------- */
+const settingsForm = document.getElementById('settings-form');
+const serverIpInput = document.getElementById('server_ip');
+const serverIpError = document.getElementById('server-ip-error');
+
+settingsForm.addEventListener('submit', (ev) => {
+  const ip = serverIpInput.value.trim();
+  if (ip && !/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(ip)) {
+    ev.preventDefault();
+    serverIpError.classList.remove('hidden');
+    serverIpInput.focus();
+    toast('Invalid IP address entered.');
+    return false;
+  }
+  serverIpError.classList.add('hidden');
+  // allow submit
+});
+
+/* Reset settings locally (not server reset) */
+document.getElementById('reset-settings').addEventListener('click', () => {
+  if (confirm('Reset form fields to server values?')) {
+    serverIpError.classList.add('hidden');
+    // reload to get server values (safe fallback)
+    window.location.reload();
+  }
+});
+
+/* -------------------------
+   Socket.IO updates (safe)
+   ------------------------- */
+try {
+  const socket = io('/admin', { transports: ['websocket', 'polling'] });
+
+  socket.on('connect', () => { toast('Realtime connected'); });
+  socket.on('disconnect', () => { toast('Realtime disconnected'); });
+
+  socket.on('system_stats', (data) => {
+    if (!data) return;
+    const toFixed = (n)=> (typeof n === 'number' ? n.toFixed(2) : n);
+    const cpuEl = document.getElementById('cpu-usage');
+    const memEl = document.getElementById('memory-usage');
+    const diskEl = document.getElementById('disk-usage');
+    const sentEl = document.getElementById('network-sent');
+    const recvEl = document.getElementById('network-recv');
+    const connectionsEl = document.getElementById('active-connections');
+    cpuEl.textContent = `${data.cpu_usage}%`;
+    document.getElementById('cpu-bar').style.width = `${data.cpu_usage}%`;
+    memEl.textContent = `${toFixed(data.memory_used)} / ${toFixed(data.memory_total)} GB (${data.memory_usage}%)`;
+    document.getElementById('mem-bar').style.width = `${data.memory_usage}%`;
+    diskEl.textContent = `${toFixed(data.disk_used)} / ${toFixed(data.disk_total)} GB (${data.disk_usage}%)`;
+    document.getElementById('disk-bar').style.width = `${data.disk_usage}%`;
+    sentEl.textContent = `${toFixed(data.network_sent)} MB`;
+    recvEl.textContent = `${toFixed(data.network_recv)} MB`;
+    connectionsEl.textContent = data.active_connections;
+  });
+
+  socket.on('vps_stats', (map) => {
+    if (!map || typeof map !== 'object') return;
+    Object.keys(map).forEach(vps_id => {
+      const statElement = document.getElementById(`vps-stats-${vps_id}`);
+      if (!statElement) return;
+      const s = map[vps_id];
+      if (s && s.status === 'running') {
+        statElement.textContent = `CPU: ${s.cpu_percent}%, Mem: ${s.memory_percent}%`;
+      } else {
+        statElement.textContent = `Status: ${s.status || 'unknown'}`;
+      }
+    });
+  });
+
+  socket.on('vps_status', (d) => {
+    if (!d || !d.vps_id) return;
+    const statusElement = document.getElementById(`vps-status-${d.vps_id}`);
+    if (!statusElement) return;
+    statusElement.textContent = d.status?.charAt(0).toUpperCase() + d.status?.slice(1);
+    statusElement.className = d.status === 'running' ? 'inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700' : 'inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700';
+  });
+} catch (e) {
+  console.error('Socket init failed', e);
+}
+
+/* -------------------------
+   Button actions using Modal (delete, prune)
+   ------------------------- */
+function postJson(url, data={}) {
+  return fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) })
+    .then(r => r.json().catch(()=>({})));
+}
+
+// Delete user handlers
+document.querySelectorAll('.delete-user-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const userId = btn.getAttribute('data-user-id');
+    modal.open('Delete user? This cannot be undone.', async () => {
+      const res = await postJson(`/admin/delete_user/${userId}`);
+      if (res && res.error) toast(`Error: ${res.error}`);
+      else { toast(res.message || 'User deleted'); window.location.reload(); }
+    });
+  });
+});
+
+// Ban/unban/make-admin/remove-admin
+document.querySelectorAll('.ban-btn, .unban-btn, .make-admin-btn, .remove-admin-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const id = btn.getAttribute('data-user-id');
+    if (btn.classList.contains('ban-btn')) {
+      modal.open('Ban this user?', async () => {
+        const r = await postJson(`/admin/ban_user/${id}`); toast(r.message || 'Banned'); window.location.reload();
+      });
+    } else if (btn.classList.contains('unban-btn')) {
+      modal.open('Unban this user?', async () => {
+        const r = await postJson(`/admin/unban_user/${id}`); toast(r.message || 'Unbanned'); window.location.reload();
+      });
+    } else if (btn.classList.contains('make-admin-btn')) {
+      modal.open('Grant admin to this user?', async () => {
+        const r = await postJson(`/admin/make_admin/${id}`); toast(r.message || 'Role updated'); window.location.reload();
+      });
+    } else if (btn.classList.contains('remove-admin-btn')) {
+      modal.open('Remove admin role?', async () => {
+        const r = await postJson(`/admin/remove_admin/${id}`); toast(r.message || 'Role updated'); window.location.reload();
+      });
+    }
+  });
+});
+
+// Prune docker
+document.getElementById('prune-docker').addEventListener('click', () => {
+  modal.open('Prune unused Docker resources? This cannot be undone.', async () => {
+    const r = await postJson('{{ url_for("admin_docker_prune") }}');
+    if (r && r.error) toast(`Error: ${r.error}`); else toast(r.message || 'Prune complete');
+  });
+});
+
+/* quick UI hooks */
+document.getElementById('toggle-settings').addEventListener('click', () => {
+  // scroll to settings and focus first field
+  document.getElementById('panel_name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.getElementById('panel_name').focus();
+});
+document.getElementById('open-settings').addEventListener('click', () => document.getElementById('toggle-settings').click());
+
+</script>
+{% endblock %}

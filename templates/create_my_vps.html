@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Create My VPS{% endblock %}
+{% block content %}
+<h2 class="mb-4">Create My VPS</h2>
+<form method="POST" action="{{ url_for('create_my_vps') }}">
+    <div class="mb-3">
+        <label for="os_image" class="form-label">Operating System</label>
+        <select class="form-select" id="os_image" name="os_image" required>
+            {% for os in os_images %}
+                <option value="{{ os }}">{{ os }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <p><strong>Resources (Fixed):</strong></p>
+        <p>Memory: 1GB | CPU: 1 core | Disk: 10GB</p>
+    </div>
+    <button type="submit" class="btn btn-primary">Create VPS</button>
+</form>
+{% endblock %}

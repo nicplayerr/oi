@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}VPS Console - {{ vps.vps_id }}{% endblock %}
+{% block content %}
+<div class="bg-white p-6 rounded-lg shadow-md">
+    <h2 class="text-2xl font-bold mb-4">VPS Console: {{ vps.vps_id }}</h2>
+    <div id="terminal" class="bg-black text-white p-4 rounded font-mono h-96 overflow-auto"></div>
+    <p class="mt-2 text-gray-600">Type commands above. Use Ctrl+C to exit.</p>
+</div>
+<script>
+    const socket = io('/console');
+    const terminal = document.getElementById('terminal');
+
+    socket.on('connect', () => {
+        socket.emit('start_shell', { vps_id: '{{ vps.vps_id }}' });
+    });
+
+    socket.on('output', (data) => {
+        terminal.innerHTML += data.replace(/\n/g, '<br>').replace(/ /g, '&nbsp;');
+        terminal.scrollTop = terminal.scrollHeight;
+    });
+
+    socket.on('error', (error) => {
+        terminal.innerHTML += '<span class="text-red-500">' + error + '</span><br>';
+        terminal.scrollTop = terminal.scrollHeight;
+    });
+
+    socket.on('shell_exit', () => {
+        terminal.innerHTML += '<span class="text-yellow-500">Shell session ended.</span><br>';
+        terminal.scrollTop = terminal.scrollHeight;
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.ctrlKey && event.key === 'c') {
+            socket.emit('input', '\x03');
+        } else if (event.key.length === 1) {
+            socket.emit('input', event.key);
+        } else if (event.key === 'Enter') {
+            socket.emit('input', '\n');
+        } else if (event.key === 'Backspace') {
+            socket.emit('input', '\b');
+        }
+    });
+
+    function resizeTerminal() {
+        socket.emit('resize', { cols: 80, rows: 24 });
+    }
+
+    window.addEventListener('resize', resizeTerminal);
+    resizeTerminal();
+</script>
+{% endblock %}

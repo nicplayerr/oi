@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="{{ panel_name }} - Modern Animated Admin Dashboard">
+    <meta name="keywords" content="dashboard, admin, {{ panel_name|lower }}, animated">
+    <meta name="author" content="{{ panel_name }}">
+    <meta name="theme-color" content="#3b82f6">
+    <title>{{ panel_name }} - {% block title %}{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+        <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="https://i.imgur.com/pTwxp1B.png">
+    <link rel="icon" type="image/png" href="https://i.imgur.com/pTwxp1B.png">
+    <link rel="apple-touch-icon" href="https://i.imgur.com/pTwxp1B.png">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #1d4ed8;
+            --secondary: #6b7280;
+            --background: #f9fafb;
+            --text: #111827;
+            --accent: #10b981;
+        }
+
+        [data-theme="dark"] {
+            --primary: #60a5fa;
+            --primary-dark: #3b82f6;
+            --secondary: #9ca3af;
+            --background: #0f172a;
+            --text: #e5e7eb;
+            --accent: #34d399;
+        }
+
+        body {
+            background-color: var(--background);
+            color: var(--text);
+            transition: all 0.4s ease;
+            opacity: 0;
+            animation: fadeIn 0.6s ease forwards;
+        }
+
+        .nav-link {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -2px;
+            left: 0;
+            background-color: var(--accent);
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .nav-link:hover {
+            transform: translateY(-2px);
+        }
+
+        .header-text {
+            display: inline-block;
+            overflow: hidden;
+            white-space: nowrap;
+            animation: typewriter 2s steps(20) 1s 1 normal both;
+        }
+
+        .header-text span {
+            display: inline-block;
+            opacity: 0;
+            animation: letterBounce 0.3s ease forwards;
+        }
+
+        .parallax-header {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            background-attachment: fixed;
+            background-size: cover;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .parallax-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: subtlePulse 5s infinite ease-in-out;
+        }
+
+        /* Improved mobile styles */
+        @media (max-width: 768px) {
+            .nav-menu {
+                transform: translateX(100%);
+                transition: transform 0.4s ease-in-out;
+                width: 100%;
+                max-width: 300px;
+                background: var(--primary);
+                z-index: 1000;
+                padding-top: 4rem;
+                box-shadow: -4px 0 8px rgba(0, 0, 0, 0.2);
+            }
+
+            .nav-menu.open {
+                transform: translateX(0);
+            }
+
+            .nav-link {
+                padding: 1rem;
+                width: 100%;
+                text-align: left;
+                font-size: 1.1rem;
+            }
+
+            .header-container {
+                flex-wrap: nowrap;
+                align-items: center;
+            }
+
+            .menu-toggle {
+                z-index: 1100;
+                font-size: 1.5rem;
+                padding: 0.5rem;
+            }
+
+            .close-button {
+                position: absolute;
+                top: 1rem;
+                right: 1rem;
+                font-size: 1.5rem;
+                color: white;
+            }
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        @keyframes typewriter {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+        @keyframes letterBounce {
+            0% { transform: translateY(20px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes subtlePulse {
+            0% { opacity: 0.1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 0.1; }
+        }
+
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.7s ease-out;
+        }
+
+        .animate-on-scroll.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.6s ease;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 5px solid var(--primary);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .back-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--primary);
+            color: white;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            cursor: pointer;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .back-to-top:hover {
+            transform: scale(1.1);
+            background: var(--primary-dark);
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased">
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <header class="parallax-header text-white sticky top-0 z-50 shadow-xl">
+        <div class="container mx-auto px-4 py-4 flex items-center justify-between header-container">
+            <div class="flex items-center space-x-4">
+                <h1 class="header-text text-xl md:text-2xl font-bold">
+                    {% for char in panel_name.split() %}
+                        <span>{{ char }}</span>
+                    {% endfor %}
+                </h1>
+                <button id="theme-toggle" class="p-2 rounded-full hover:bg-blue-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300" aria-label="Toggle theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+
+            <button id="menu-toggle" class="md:hidden p-2 rounded-lg hover:bg-blue-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300 menu-toggle" aria-label="Toggle menu">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+
+            <nav class="nav-menu fixed md:static top-0 right-0 h-full md:h-auto bg-blue-600 md:bg-transparent w-full md:w-auto flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6 p-6 md:p-0 transition-transform duration-300" aria-label="Main navigation">
+                <button id="close-menu" class="md:hidden close-button p-2 rounded-lg hover:bg-blue-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300" aria-label="Close menu">
+                    <i class="fas fa-times"></i>
+                </button>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('dashboard') }}" class="nav-link text-white hover:text-blue-200 md:hover:text-white focus:outline-none focus:underline" tabindex="0">Dashboard</a>
+                    <a href="{{ url_for('profile') }}" class="nav-link text-white hover:text-blue-200 md:hover:text-white focus:outline-none focus:underline" tabindex="0">Profile</a>
+                    {% if is_admin %}
+                        <a href="{{ url_for('admin_panel') }}" class="nav-link text-white hover:text-blue-200 md:hover:text-white focus:outline-none focus:underline" tabindex="0">Admin</a>
+                    {% endif %}
+                    <a href="{{ url_for('logout') }}" class="nav-link text-white hover:text-blue-200 md:hover:text-white bg-gradient-to-r from-red-500 to-red-600 px-4 py-2 rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-300" tabindex="0">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="nav-link text-white hover:text-blue-200 md:hover:text-white bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-300" tabindex="0">Login</a>
+                    <a href="{{ url_for('register') }}" class="nav-link text-white hover:text-blue-200 md:hover:text-white bg-gradient-to-r from-green-500 to-green-600 px-4 py-2 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-300" tabindex="0">Register</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 flex-grow" role="main">
+        {% if error %}
+            <div class="bg-red-100 text-red-700 p-4 rounded-lg mb-6 shadow-md animate-slide-in" role="alert" aria-live="assertive">
+                <i class="fas fa-exclamation-circle mr-2"></i>{{ error }}
+            </div>
+        {% endif %}
+        {% if success %}
+            <div class="bg-green-100 text-green-700 p-4 rounded-lg mb-6 shadow-md animate-slide-in" role="alert" aria-live="assertive">
+                <i class="fas fa-check-circle mr-2"></i>{{ success }}
+            </div>
+        {% endif %}
+        <div class="animate-on-scroll">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="bg-gray-900 text-white py-8 text-center" role="contentinfo">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div>
+            </div>
+            <p class="text-sm">&copy; {{ panel_name }} 2025. All rights reserved. | H ♡ R</p>
+            <p class="text-sm">Version 1.0</p>
+        </div>
+    </footer>
+
+    <button class="back-to-top" id="back-to-top" aria-label="Back to top">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+
+    <script>
+        // Theme toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            html.setAttribute('data-theme', currentTheme === 'dark' ? 'light' : 'dark');
+            themeToggle.querySelector('i').className = currentTheme === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+        });
+
+        // Mobile menu toggle
+        const menuToggle = document.getElementById('menu-toggle');
+        const closeMenu = document.getElementById('close-menu');
+        const navMenu = document.querySelector('.nav-menu');
+
+        menuToggle.addEventListener('click', () => {
+            navMenu.classList.add('open');
+            document.body.style.overflow = 'hidden'; // Prevent scrolling when menu is open
+        });
+
+        closeMenu.addEventListener('click', () => {
+            navMenu.classList.remove('open');
+            document.body.style.overflow = ''; // Restore scrolling
+        });
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!navMenu.contains(e.target) && !menuToggle.contains(e.target)) {
+                navMenu.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+        });
+
+        // Close mobile menu when clicking a nav link
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                navMenu.classList.remove('open');
+                document.body.style.overflow = '';
+            });
+        });
+
+        // Prevent default touchmove behavior when menu is open
+        navMenu.addEventListener('touchmove', (e) => {
+            if (navMenu.classList.contains('open')) {
+                e.preventDefault();
+            }
+        });
+
+        // Loading animation
+        window.addEventListener('load', () => {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            loadingOverlay.style.opacity = '0';
+            setTimeout(() => {
+                loadingOverlay.style.display = 'none';
+            }, 600);
+        });
+
+        // Scroll animations
+        const scrollElements = document.querySelectorAll('.animate-on-scroll');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        scrollElements.forEach(el => observer.observe(el));
+
+        // Button pulse effect on hover
+        const buttons = document.querySelectorAll('.nav-link');
+        buttons.forEach(button => {
+            button.addEventListener('mouseenter', () => {
+                button.style.animation = 'pulse 0.5s';
+            });
+            button.addEventListener('animationend', () => {
+                button.style.animation = '';
+            });
+        });
+
+        // Back to top button
+        const backToTop = document.getElementById('back-to-top');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                backToTop.classList.add('visible');
+            } else {
+                backToTop.classList.remove('visible');
+            }
+        });
+
+        backToTop.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard navigation for accessibility
+        document.querySelectorAll('.nav-link, #theme-toggle, #menu-toggle, #close-menu, #back-to-top').forEach(element => {
+            element.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    element.click();
+                }
+            });
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

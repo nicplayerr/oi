@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create VPS (Admin) - {{ db.get_setting('panel_name', 'HVM PANEL') }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">{{ db.get_setting('panel_name', 'HVM PANEL') }}</h1>
+            <div>
+                <a href="{{ url_for('dashboard') }}" class="mr-4 hover:underline">Dashboard</a>
+                <a href="{{ url_for('admin_panel') }}" class="mr-4 hover:underline">Admin Panel</a>
+                <a href="{{ url_for('logout') }}" class="hover:underline">Logout</a>
+            </div>
+        </div>
+    </nav>
+    <div class="container mx-auto mt-8 flex-grow">
+        <div class="bg-white p-6 rounded-lg shadow-lg max-w-md mx-auto">
+            <h2 class="text-2xl font-bold mb-4">Create VPS for User</h2>
+            {% if error %}
+                <div class="bg-red-100 text-red-700 p-3 rounded mb-4">{{ error }}</div>
+            {% endif %}
+            <form method="POST" action="{{ url_for('create_vps_admin') }}">
+                <div class="mb-4">
+                    <label for="user_id" class="block text-gray-700">Select User</label>
+                    <select id="user_id" name="user_id" class="w-full p-2 border rounded" required>
+                        {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="memory" class="block text-gray-700">Memory (GB)</label>
+                    <input type="number" id="memory" name="memory" value="1" min="1" max="512" class="w-full p-2 border rounded" required>
+                </div>
+                <div class="mb-4">
+                    <label for="cpu" class="block text-gray-700">CPU Cores</label>
+                    <input type="number" id="cpu" name="cpu" value="1" min="1" max="32" class="w-full p-2 border rounded" required>
+                </div>
+                <div class="mb-4">
+                    <label for="disk" class="block text-gray-700">Disk Space (GB)</label>
+                    <input type="number" id="disk" name="disk" value="10" min="10" max="1000" class="w-full p-2 border rounded" required>
+                </div>
+                <div class="mb-4">
+                    <label for="os_image" class="block text-gray-700">Operating System</label>
+                    <select id="os_image" name="os_image" class="w-full p-2 border rounded" required>
+                        {% for image in os_images %}
+                            <option value="{{ image }}">{{ image }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Create VPS</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
